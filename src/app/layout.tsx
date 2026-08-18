@@ -5,10 +5,8 @@ import "./globals.css";
 import { brandAssets } from "@/brand/assets";
 import { siteConfig } from "@/brand/site-config";
 import { MotionController } from "@/components/MotionController";
-import { SiteFooter } from "@/components/SiteFooter";
-import { SiteHeader } from "@/components/SiteHeader";
+import { AppLayoutShell } from "@/components/AppLayoutShell";
 import { SkipLink } from "@/components/SkipLink";
-import { UtilityWidgets } from "@/components/UtilityWidgets";
 
 const poppins = localFont({
   src: [
@@ -98,10 +96,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} type="application/ld+json" />
         <MotionController />
         <SkipLink />
-        <SiteHeader />
-        <main id="main-content" tabIndex={-1}>{children}</main>
-        <SiteFooter />
-        <UtilityWidgets />
+        <AppLayoutShell>{children}</AppLayoutShell>
         <Analytics />
       </body>
     </html>

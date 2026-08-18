@@ -39,6 +39,7 @@ export function SiteHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState<MenuTab>("group");
+  const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
   const [customLogo, setCustomLogo] = useState<string | null>(null);
   const [customNavigation, setCustomNavigation] = useState<Array<{ label: string; href: string }>>([]);
   const headerRef = useRef<HTMLElement>(null);
@@ -69,6 +70,29 @@ export function SiteHeader() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSession() {
+      try {
+        const response = await fetch("/api/admin/session", { cache: "no-store" });
+        if (!response.ok) {
+          if (active) setLoggedInUser(null);
+          return;
+        }
+        const data = (await response.json()) as { username?: string };
+        if (active) setLoggedInUser(data.username ?? null);
+      } catch {
+        if (active) setLoggedInUser(null);
+      }
+    }
+
+    void loadSession();
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
 
   const isOverDarkHero = usesDarkHero(pathname);
   const navigationLinks = customNavigation.length > 0 ? [{ label: "Home", href: "/" }, ...customNavigation, { label: "Contact", href: "/contact" }] : [...defaultPrimaryLinks];
@@ -219,7 +243,24 @@ export function SiteHeader() {
                     {tab.label}
                   </button>
                 ))}
-                <Link className="site-menu__login-link" href="/admin/login" onClick={closeMenu}>Login</Link>
+                {loggedInUser ? (
+                  <>
+                    <span className="site-menu__login-link">Logged in as {loggedInUser}</span>
+                    <button
+                      className="site-menu__login-link"
+                      onClick={async () => {
+                        await fetch("/api/admin/logout", { method: "POST" });
+                        setLoggedInUser(null);
+                        closeMenu();
+                      }}
+                      type="button"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <Link className="site-menu__login-link" href="/admin/login" onClick={closeMenu}>Login</Link>
+                )}
               </div>
 
               {activeTab === "group" ? (

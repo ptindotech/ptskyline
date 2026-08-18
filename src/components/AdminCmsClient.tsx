@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+type CmsNavigationLink = {
+  label: string;
+  href: string;
+};
+
 type CmsPage = {
   slug: string;
   title: string;
@@ -10,9 +15,10 @@ type CmsPage = {
   markdown: string;
 };
 
-type CmsNavigationLink = {
-  label: string;
-  href: string;
+type CmsCollectionItem = {
+  title: string;
+  description: string;
+  body: string;
 };
 
 type CmsSettings = {
@@ -48,38 +54,90 @@ type CmsSettings = {
   };
 };
 
+type SectionKey = "pages" | "posts" | "updates" | "work" | "sectors" | "publicRecords" | "settings";
+
+type SectionContentMap = {
+  pages: CmsPage[];
+  posts: CmsCollectionItem[];
+  updates: CmsCollectionItem[];
+  work: CmsCollectionItem[];
+  sectors: CmsCollectionItem[];
+  publicRecords: CmsCollectionItem[];
+};
+
+const sectionOrder: SectionKey[] = ["pages", "posts", "updates", "work", "sectors", "publicRecords", "settings"];
+const sectionLabels: Record<SectionKey, string> = {
+  pages: "Pages",
+  posts: "Posts",
+  updates: "Updates",
+  work: "Work",
+  sectors: "Sectors",
+  publicRecords: "Public records",
+  settings: "Settings",
+};
+
 export function AdminCmsClient() {
   const router = useRouter();
   const [pages, setPages] = useState<CmsPage[]>([]);
   const [settings, setSettings] = useState<CmsSettings | null>(null);
   const [selectedSlug, setSelectedSlug] = useState<string>("home");
   const [selectedPage, setSelectedPage] = useState<CmsPage | null>(null);
+  const [selectedSection, setSelectedSection] = useState<SectionKey>("pages");
+  const [sectionContent, setSectionContent] = useState<SectionContentMap>({
+    pages: [],
+    posts: [],
+    updates: [],
+    work: [],
+    sectors: [],
+    publicRecords: [],
+  });
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isClosing, setIsClosing] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>("Not saved yet");
   const [newPageName, setNewPageName] = useState("");
 
   useEffect(() => {
     async function load() {
-      const [settingsRes, pagesRes] = await Promise.all([
+      const [settingsRes, pagesRes, contentRes] = await Promise.all([
         fetch("/api/admin/settings"),
         fetch("/api/admin/pages"),
+        fetch("/api/admin/content"),
       ]);
 
-      if (settingsRes.status === 401 || pagesRes.status === 401) {
+      if ([settingsRes.status, pagesRes.status, contentRes.status].includes(401)) {
         router.push("/admin/login");
         return;
       }
 
       const settingsData = settingsRes.ok ? await settingsRes.json() : null;
       const pagesData = pagesRes.ok ? await pagesRes.json() : { pages: [] };
+      const contentData = contentRes.ok ? await contentRes.json() : { content: null };
+
+      const nextPages = pagesData.pages ?? [];
+      const nextContent = contentData?.content ?? {
+        pages: nextPages,
+        posts: [],
+        updates: [],
+        work: [],
+        sectors: [],
+        publicRecords: [],
+      };
 
       setSettings(settingsData?.settings ?? null);
-      setPages(pagesData.pages ?? []);
+      setPages(nextPages);
+      setSectionContent({
+        pages: nextContent.pages ?? nextPages,
+        posts: nextContent.posts ?? [],
+        updates: nextContent.updates ?? [],
+        work: nextContent.work ?? [],
+        sectors: nextContent.sectors ?? [],
+        publicRecords: nextContent.publicRecords ?? [],
+      });
 
-      if ((pagesData.pages ?? []).length > 0) {
-        const first = (pagesData.pages ?? [])[0];
+      if (nextPages.length > 0) {
+        const first = nextPages[0];
         setSelectedSlug(first.slug);
         setSelectedPage(first);
       }
@@ -102,6 +160,34 @@ export function AdminCmsClient() {
 
   function updateLastSaved() {
     setLastSaved(new Date().toLocaleString([], { dateStyle: "medium", timeStyle: "short" }));
+  }
+
+  function closeDashboard() {
+    setIsClosing(true);
+    window.setTimeout(() => {
+      router.push("/");
+    }, 220);
+  }
+
+  function updateCollectionItem(section: Exclude<SectionKey, "pages" | "settings">, index: number, changes: Partial<CmsCollectionItem>) {
+    setSectionContent((current) => ({
+      ...current,
+      [section]: (current[section] ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item),
+    }));
+  }
+
+  function addCollectionItem(section: Exclude<SectionKey, "pages" | "settings">) {
+    setSectionContent((current) => ({
+      ...current,
+      [section]: [...(current[section] ?? []), { title: "New item", description: "Add a description", body: "Add content" }],
+    }));
+  }
+
+  function removeCollectionItem(section: Exclude<SectionKey, "pages" | "settings">, index: number) {
+    setSectionContent((current) => ({
+      ...current,
+      [section]: (current[section] ?? []).filter((_, itemIndex) => itemIndex !== index),
+    }));
   }
 
   async function savePage() {
@@ -143,6 +229,31 @@ export function AdminCmsClient() {
     }
 
     setStatus("Website settings saved.");
+    updateLastSaved();
+  }
+
+  async function saveCollection(section: Exclude<SectionKey, "pages" | "settings">) {
+    setSaving(true);
+    setStatus("");
+    const payload = {
+      ...sectionContent,
+      [section]: sectionContent[section],
+    };
+
+    const response = await fetch("/api/admin/content", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: payload }),
+    });
+    const result = await response.json();
+    setSaving(false);
+
+    if (!response.ok) {
+      setStatus(result.message || "Content could not be saved.");
+      return;
+    }
+
+    setStatus(`${sectionLabels[section]} saved.`);
     updateLastSaved();
   }
 
@@ -256,72 +367,86 @@ export function AdminCmsClient() {
 
   const stats = [
     { label: "Pages", value: String(pages.length) },
+    { label: "Sections", value: String(sectionOrder.length - 1) },
     { label: "Brand", value: settings?.brandName ?? "Draft" },
-    { label: "Email", value: settings?.email ? "Live" : "Pending" },
     { label: "Last saved", value: lastSaved },
   ];
 
   return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <div className="admin-brand">
-          <div className="admin-brand__mark">S</div>
-          <div>
-            <p className="admin-brand__eyebrow">Control</p>
+    <div className={isClosing ? "admin-shell admin-shell--closing admin-shell--horizontal" : "admin-shell admin-shell--horizontal"}>
+      <header className="admin-header">
+        <div className="admin-header__left">
+          <div className="admin-brand--compact">
+            <div className="admin-brand__mark">S</div>
             <h2>Skyline CMS</h2>
           </div>
         </div>
 
-        <nav className="admin-nav" aria-label="Dashboard sections">
-          <button className="admin-nav__item admin-nav__item--active" type="button">
-            Content
-          </button>
-          <button className="admin-nav__item" type="button">
-            Settings
-          </button>
+        <nav className="admin-nav--horizontal" aria-label="Dashboard sections">
+          {sectionOrder.map((section) => (
+            <button
+              key={section}
+              className={selectedSection === section ? "admin-nav__item admin-nav__item--active" : "admin-nav__item"}
+              onClick={() => setSelectedSection(section)}
+              type="button"
+            >
+              {section === "settings" ? "Settings" : sectionLabels[section]}
+            </button>
+          ))}
         </nav>
 
-        <div className="admin-section-label">Pages</div>
-
-        <div className="admin-create-page">
-          <input
-            className="admin-input admin-input--dark"
-            onChange={(event) => setNewPageName(event.target.value)}
-            placeholder="New page name"
-            type="text"
-            value={newPageName}
-          />
-          <button className="button button--light admin-create-button" onClick={createPage} type="button">
-            New page
+        <div className="admin-header__right">
+          <button aria-label="Close dashboard" className="admin-close-button" onClick={closeDashboard} type="button">
+            <span aria-hidden="true">×</span>
+          </button>
+          <button className="button button--ghost" onClick={async () => {
+            await fetch("/api/admin/logout", { method: "POST" });
+            router.push("/admin/login");
+            router.refresh();
+          }} type="button">
+            Log out
           </button>
         </div>
+      </header>
 
-        <ul className="admin-page-list">
-          {pages.map((page) => (
-            <li key={page.slug}>
-              <button
-                className={selectedSlug === page.slug ? "is-active" : ""}
-                onClick={() => setSelectedSlug(page.slug)}
-                type="button"
-              >
-                <span>{page.title}</span>
-                <small>{page.slug}</small>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </aside>
+      {selectedSection === "pages" ? (
+        <div className="admin-pages-bar">
+          <div className="admin-pages-bar__left">
+            <div className="admin-section-label">Pages</div>
+            <ul className="admin-page-list--horizontal">
+              {pages.map((page) => (
+                <li key={page.slug}>
+                  <button
+                    className={selectedSlug === page.slug ? "is-active" : ""}
+                    onClick={() => setSelectedSlug(page.slug)}
+                    type="button"
+                  >
+                    {page.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="admin-pages-bar__right">
+            <input
+              className="admin-input admin-input--compact"
+              onChange={(event) => setNewPageName(event.target.value)}
+              placeholder="New page name"
+              type="text"
+              value={newPageName}
+            />
+            <button className="button button--light admin-create-button" onClick={createPage} type="button">
+              New page
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <main className="admin-main">
         <header className="admin-topbar">
-          <div>
+          <div className="admin-topbar__title-wrap">
             <p className="admin-kicker">Website dashboard</p>
-            <h1>Content control centre</h1>
-          </div>
-          <div className="admin-topbar__actions">
-            <button className="button button--light" onClick={() => router.push("/")} type="button">
-              Preview site
-            </button>
+            <h1>{selectedSection === "settings" ? "Settings" : sectionLabels[selectedSection]}</h1>
           </div>
         </header>
 
@@ -336,13 +461,13 @@ export function AdminCmsClient() {
 
         {status ? <div className="admin-status">{status}</div> : null}
 
-        <section className="admin-card admin-card--wide">
-          <div className="admin-card__header">
-            <div>
-              <p className="admin-kicker">Editor</p>
-              <h2>Page content</h2>
-            </div>
-            {selectedPage ? (
+        {selectedSection === "pages" && selectedPage ? (
+          <section className="admin-card admin-card--wide">
+            <div className="admin-card__header">
+              <div>
+                <p className="admin-kicker">Editor</p>
+                <h2>Page content</h2>
+              </div>
               <div className="admin-card__actions">
                 <button className="button button--ghost" disabled={saving} onClick={deleteCurrentPage} type="button">
                   Delete page
@@ -351,10 +476,8 @@ export function AdminCmsClient() {
                   {saving ? "Saving…" : "Save page"}
                 </button>
               </div>
-            ) : null}
-          </div>
+            </div>
 
-          {selectedPage ? (
             <div className="admin-page-editor">
               <label className="admin-field admin-field--split">
                 <span className="admin-field__label">Title</span>
@@ -391,10 +514,71 @@ export function AdminCmsClient() {
                 />
               </label>
             </div>
-          ) : null}
-        </section>
+          </section>
+        ) : null}
 
-        {settings ? (
+        {selectedSection !== "pages" && selectedSection !== "settings" ? (
+          <section className="admin-card admin-card--wide">
+            <div className="admin-card__header">
+              <div>
+                <p className="admin-kicker">Collection</p>
+                <h2>{sectionLabels[selectedSection]}</h2>
+              </div>
+              <div className="admin-card__actions">
+                <button className="button button--light" onClick={() => addCollectionItem(selectedSection)} type="button">
+                  Add item
+                </button>
+                <button className="button button--primary" disabled={saving} onClick={() => saveCollection(selectedSection)} type="button">
+                  {saving ? "Saving…" : "Save collection"}
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-settings-grid">
+              {(sectionContent[selectedSection] ?? []).map((item, index) => (
+                <div className="admin-card admin-card--inner" key={`${selectedSection}-${index}`}>
+                  <div className="admin-card__header admin-card__header--compact">
+                    <strong>{item.title || `Item ${index + 1}`}</strong>
+                    <button className="button button--ghost" onClick={() => removeCollectionItem(selectedSection, index)} type="button">
+                      Remove
+                    </button>
+                  </div>
+                  <div className="admin-page-editor">
+                    <label className="admin-field">
+                      <span className="admin-field__label">Title</span>
+                      <input
+                        className="admin-input"
+                        onChange={(event) => updateCollectionItem(selectedSection, index, { title: event.target.value })}
+                        type="text"
+                        value={item.title}
+                      />
+                    </label>
+                    <label className="admin-field">
+                      <span className="admin-field__label">Description</span>
+                      <input
+                        className="admin-input"
+                        onChange={(event) => updateCollectionItem(selectedSection, index, { description: event.target.value })}
+                        type="text"
+                        value={item.description}
+                      />
+                    </label>
+                    <label className="admin-field">
+                      <span className="admin-field__label">Body</span>
+                      <textarea
+                        className="admin-textarea"
+                        onChange={(event) => updateCollectionItem(selectedSection, index, { body: event.target.value })}
+                        rows={8}
+                        value={item.body}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {selectedSection === "settings" && settings ? (
           <section className="admin-card">
             <div className="admin-card__header">
               <div>
