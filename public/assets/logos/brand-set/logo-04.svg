@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 841.89 595.28">
+  <!-- Generator: Adobe Illustrator 30.7.0, SVG Export Plug-In . SVG Version: 2.1.4 Build 114)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#linear-gradient1);
+      }
+
+      .st1 {
+        fill: url(#linear-gradient);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="227.37" y1="158.38" x2="688.51" y2="603.05" gradientUnits="userSpaceOnUse">
+      <stop offset=".02" stop-color="#00c0ff"/>
+      <stop offset="1" stop-color="#4218b8"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient1" x1="307.77" y1="75" x2="768.92" y2="519.67" xlink:href="#linear-gradient"/>
+  </defs>
+  <polygon class="st1" points="420.96 409.28 360.17 304.06 337.56 343.16 292.2 343.17 269.5 303.88 337.46 185.99 382.82 186.02 488.93 369.93 466.33 409.11 420.96 409.28"/>
+  <polygon class="st0" points="549.76 343.12 504.36 343.17 436.39 225.33 459.07 186.06 504.44 186.03 572.39 303.85 549.76 343.12"/>
+</svg>

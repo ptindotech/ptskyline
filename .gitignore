@@ -1,0 +1,23 @@
+# dependencies and framework output
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# local configuration / deployment state
+.env
+.env.*
+!.env.example
+.vercel/
+
+# raw delivery archives and duplicated intake extraction
+_intake/
+_logo-intake/
+
+# operating-system and editor files
+.DS_Store
+*.log
+.vercel

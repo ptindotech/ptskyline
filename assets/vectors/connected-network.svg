@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="mendozer-network-gradient" x1="202" y1="142" x2="395" y2="350" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1CABF1"/>
+      <stop offset="1" stop-color="#1E4FC7"/>
+    </linearGradient>
+  </defs>
+  <circle cx="310" cy="250" r="218" stroke="#2FA1DB" stroke-opacity=".18"/>
+  <path d="M310 250 177 92M310 250 462 171M310 250 170 393M310 250 460 398M310 250 310 52" stroke="#2FA1DB" stroke-opacity=".34"/>
+  <circle cx="310" cy="250" r="48" fill="url(#mendozer-network-gradient)"/>
+  <circle cx="310" cy="250" r="64" stroke="#2FA1DB" stroke-opacity=".18" stroke-width="12"/>
+  <circle cx="310" cy="250" r="84" stroke="#2FA1DB" stroke-opacity=".08" stroke-width="12"/>
+  <path d="M310 237v26M297 250h26" stroke="#FFF" stroke-width="2" stroke-linecap="round"/>
+</svg>

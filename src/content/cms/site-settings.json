@@ -1,0 +1,30 @@
+{
+  "brandName": "Skyline TransOcean Synergi",
+  "shortName": "Skyline",
+  "tagline": "Connected infrastructure, logistics, energy and growth across the region.",
+  "description": "Skyline TransOcean Synergi is a multi-sector operating group focused on infrastructure, energy, logistics and community delivery.",
+  "email": "hello@skyline-transocean.com",
+  "phone": "+264 81 000 0000",
+  "address": "Windhoek, Namibia",
+  "url": "https://skyline-transocean.example",
+  "locale": "en_NA",
+  "social": {
+    "instagram": "https://www.instagram.com/skyline-transocean",
+    "facebook": "https://www.facebook.com/skyline-transocean"
+  },
+  "theme": {
+    "accent": "#0B1E3D",
+    "accentSoft": "#5E8BD8",
+    "dark": "#06142D",
+    "light": "#F5F7FB"
+  },
+  "smtp": {
+    "host": "",
+    "port": "587",
+    "user": "",
+    "pass": "",
+    "from": "",
+    "to": "",
+    "secure": true
+  }
+}
