@@ -10,6 +10,11 @@ type CmsPage = {
   markdown: string;
 };
 
+type CmsNavigationLink = {
+  label: string;
+  href: string;
+};
+
 type CmsSettings = {
   brandName: string;
   shortName: string;
@@ -20,6 +25,8 @@ type CmsSettings = {
   address: string;
   url: string;
   locale: string;
+  logo: string;
+  navigation: CmsNavigationLink[];
   social: {
     instagram: string;
     facebook: string;
@@ -137,6 +144,47 @@ export function AdminCmsClient() {
 
     setStatus("Website settings saved.");
     updateLastSaved();
+  }
+
+  async function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !settings) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = typeof reader.result === "string" ? reader.result : settings.logo;
+      setSettings({ ...settings, logo: value });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateNavigationLink(index: number, field: "label" | "href", value: string) {
+    if (!settings) return;
+    const nextNavigation = settings.navigation.map((link, linkIndex) => {
+      if (linkIndex !== index) return link;
+      return { ...link, [field]: value };
+    });
+    setSettings({ ...settings, navigation: nextNavigation });
+  }
+
+  function addNavigationLink() {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      navigation: [...settings.navigation, { label: "New link", href: "/" }],
+    });
+  }
+
+  function removeNavigationLink(index: number) {
+    if (!settings) return;
+    if (settings.navigation.length <= 1) {
+      setStatus("Keep at least one navigation link.");
+      return;
+    }
+    setSettings({
+      ...settings,
+      navigation: settings.navigation.filter((_, linkIndex) => linkIndex !== index),
+    });
   }
 
   async function createPage() {
@@ -375,6 +423,47 @@ export function AdminCmsClient() {
                 <span className="admin-field__label">Description</span>
                 <input className="admin-input" onChange={(event) => setSettings({ ...settings, description: event.target.value })} type="text" value={settings.description} />
               </label>
+
+              <div className="admin-field admin-field--full">
+                <span className="admin-field__label">Header logo</span>
+                <div className="admin-logo-upload">
+                  {settings.logo ? (
+                    <img alt="Current header logo" className="admin-logo-preview" src={settings.logo} />
+                  ) : null}
+                  <input accept="image/*" className="admin-input" onChange={handleLogoUpload} type="file" />
+                </div>
+              </div>
+
+              <div className="admin-field admin-field--full">
+                <span className="admin-field__label">Navigation links</span>
+                <div className="admin-navigation-editor">
+                  {settings.navigation.map((link, index) => (
+                    <div className="admin-navigation-row" key={`${link.label}-${index}`}>
+                      <input
+                        className="admin-input"
+                        onChange={(event) => updateNavigationLink(index, "label", event.target.value)}
+                        placeholder="Label"
+                        type="text"
+                        value={link.label}
+                      />
+                      <input
+                        className="admin-input"
+                        onChange={(event) => updateNavigationLink(index, "href", event.target.value)}
+                        placeholder="/about"
+                        type="text"
+                        value={link.href}
+                      />
+                      <button className="button button--ghost" onClick={() => removeNavigationLink(index)} type="button">
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button className="button button--light" onClick={addNavigationLink} type="button">
+                    Add link
+                  </button>
+                </div>
+              </div>
+
               <label className="admin-field">
                 <span className="admin-field__label">Email</span>
                 <input className="admin-input" onChange={(event) => setSettings({ ...settings, email: event.target.value })} type="email" value={settings.email} />

@@ -9,6 +9,13 @@ import { brandAssets } from "@/brand/assets";
 import { siteConfig } from "@/brand/site-config";
 import { sectors, siteContent } from "@/content/site-content";
 
+type SiteSettingsResponse = {
+  settings: {
+    logo?: string;
+    navigation?: Array<{ label: string; href: string }>;
+  };
+};
+
 type MenuTab = "group" | "sectors" | "contact";
 
 const menuTabs: readonly { id: MenuTab; label: string }[] = [
@@ -17,7 +24,7 @@ const menuTabs: readonly { id: MenuTab; label: string }[] = [
   { id: "contact", label: "Contact" },
 ];
 
-const primaryLinks = [
+const defaultPrimaryLinks = [
   { label: "Home", href: "/" },
   ...siteContent.navigation,
   { label: "Contact", href: "/contact" },
@@ -32,13 +39,40 @@ export function SiteHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState<MenuTab>("group");
+  const [customLogo, setCustomLogo] = useState<string | null>(null);
+  const [customNavigation, setCustomNavigation] = useState<Array<{ label: string; href: string }>>([]);
   const headerRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadSiteSettings() {
+      try {
+        const response = await fetch("/api/site-settings", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = (await response.json()) as SiteSettingsResponse;
+        if (!active) return;
+        if (data.settings?.logo) setCustomLogo(data.settings.logo);
+        if (data.settings?.navigation && data.settings.navigation.length > 0) {
+          setCustomNavigation(data.settings.navigation);
+        }
+      } catch {
+        // Fall back to the static content when settings are unavailable.
+      }
+    }
+
+    void loadSiteSettings();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const isOverDarkHero = usesDarkHero(pathname);
-  const logoSrc = isOverDarkHero && !isScrolled ? brandAssets.logoDark : brandAssets.logoLight;
+  const navigationLinks = customNavigation.length > 0 ? [{ label: "Home", href: "/" }, ...customNavigation, { label: "Contact", href: "/contact" }] : [...defaultPrimaryLinks];
+  const logoSrc = customLogo || (isOverDarkHero && !isScrolled ? brandAssets.logoDark : brandAssets.logoLight);
   const menuFeature = siteContent.home.introduction.media;
 
   useEffect(() => {
@@ -193,8 +227,8 @@ export function SiteHeader() {
                   <div className="site-menu__primary">
                     <p className="eyebrow eyebrow--light">Mendozer Investments</p>
                     <nav aria-label="Group pages" className="site-menu__links">
-                      {primaryLinks.map((item, index) => (
-                        <Link href={item.href} key={item.href} onClick={closeMenu}>
+                      {navigationLinks.map((item, index) => (
+                        <Link href={item.href} key={`${item.label}-${item.href}`} onClick={closeMenu}>
                           <span>{item.label}</span>
                           <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                         </Link>

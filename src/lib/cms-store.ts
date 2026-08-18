@@ -18,6 +18,11 @@ export type CmsSmtpSettings = {
   secure: boolean;
 };
 
+export type CmsNavigationLink = {
+  label: string;
+  href: string;
+};
+
 export type CmsSiteSettings = {
   brandName: string;
   shortName: string;
@@ -28,6 +33,8 @@ export type CmsSiteSettings = {
   address: string;
   url: string;
   locale: string;
+  logo: string;
+  navigation: CmsNavigationLink[];
   social: {
     instagram: string;
     facebook: string;
@@ -75,6 +82,15 @@ const defaultSettings: CmsSiteSettings = {
   address: "Windhoek, Namibia",
   url: "https://mendozer.tangison.com",
   locale: "en_NA",
+  logo: "/assets/logos/mendozer-logo-full.svg",
+  navigation: [
+    { label: "About", href: "/about" },
+    { label: "Sectors", href: "/sectors" },
+    { label: "Work", href: "/work" },
+    { label: "Updates", href: "/updates" },
+    { label: "Public records", href: "/compliance" },
+    { label: "Community", href: "/community" },
+  ],
   social: {
     instagram: "https://www.instagram.com/mendozer_investments",
     facebook: "https://www.facebook.com/61593183452392",
@@ -104,7 +120,15 @@ function readJson<T>(filePath: string, fallback: T): Promise<T> {
 
 export async function getSiteSettings(): Promise<CmsSiteSettings> {
   const parsed = await readJson<CmsSiteSettings>(siteSettingsPath, defaultSettings);
-  return { ...defaultSettings, ...parsed, theme: { ...defaultSettings.theme, ...(parsed.theme ?? {}) }, social: { ...defaultSettings.social, ...(parsed.social ?? {}) }, smtp: { ...defaultSettings.smtp, ...(parsed.smtp ?? {}) } };
+  return {
+    ...defaultSettings,
+    ...parsed,
+    logo: parsed.logo || defaultSettings.logo,
+    navigation: Array.isArray(parsed.navigation) && parsed.navigation.length > 0 ? parsed.navigation : defaultSettings.navigation,
+    theme: { ...defaultSettings.theme, ...(parsed.theme ?? {}) },
+    social: { ...defaultSettings.social, ...(parsed.social ?? {}) },
+    smtp: { ...defaultSettings.smtp, ...(parsed.smtp ?? {}) },
+  };
 }
 
 export async function saveSiteSettings(input: Partial<CmsSiteSettings>): Promise<CmsSiteSettings> {
@@ -112,6 +136,8 @@ export async function saveSiteSettings(input: Partial<CmsSiteSettings>): Promise
   const next: CmsSiteSettings = {
     ...current,
     ...input,
+    logo: input.logo || current.logo,
+    navigation: Array.isArray(input.navigation) && input.navigation.length > 0 ? input.navigation : current.navigation,
     theme: { ...current.theme, ...input.theme },
     social: { ...current.social, ...input.social },
     smtp: { ...current.smtp, ...input.smtp },
